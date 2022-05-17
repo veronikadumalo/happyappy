@@ -36,3 +36,9 @@
     transform: rotate(360deg);
   }
 }
+#dropDiv {
+  position: relative;
+  width: 400px;
+  height: 300px;
+  border: 1px solid black;
+}
