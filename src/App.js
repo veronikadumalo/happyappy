@@ -17,21 +17,6 @@ function App() {
   const HEIGHT = 300;
   const [isRenderClicked, setIsRenderClicked] = useState(false);
 
-  if (navigator.mediaDevices === undefined) {
-    navigator.mediaDevices = {};
-  }
-
-  // Some browsers partially implement mediaDevices. We can't just assign an object
-  // with getUserMedia as it would overwrite existing properties.
-  // Here, we will just add the getUserMedia property if it's missing.
-  if (navigator.mediaDevices.getUserMedia === undefined) {
-    navigator.mediaDevices.getUserMedia =
-      navigator.mediaDevices.webkitGetUserMedia ||
-      navigator.mediaDevices.mozGetUserMedia ||
-      navigator.mediaDevices.msGetUserMedia ||
-      (() => Promise.reject("getUserMedia is not supported in this browser"));
-  }
-
   async function getMedia(constraints) {
     let stream = null;
 
@@ -137,7 +122,7 @@ function App() {
 
     const chunks = [];
     const stream = canvasRef.current.captureStream(30);
-    stream.addTrack(audioRef.current);
+
     const mediaRecorder = new MediaRecorder(stream, {
       mimeType: "video/webm; codecs=vp9",
     });
@@ -158,7 +143,7 @@ function App() {
       a.click();
       window.URL.revokeObjectURL(url);
     };
-
+    stream.addTrack(audioRef.current);
     mediaRecorder.start();
     setTimeout(() => {
       mediaRecorder.stop();
