@@ -1,5 +1,5 @@
 .App {
-  text-align: center;
+  /* text-align: center; */
 }
 
 .App-logo {
@@ -37,8 +37,19 @@
   }
 }
 #dropDiv {
-  position: relative;
+  position: absolute;
+  top: 8px;
   width: 400px;
   height: 300px;
-  border: 1px solid black;
+  /* border: 1px solid black; */
+}
+.kanvaContainer {
+  /* border: 1px solid yellow; */
+  width: 400px;
+  position: absolute;
+  top: 8px;
+}
+.video {
+  width: 400px;
+  height: 300px;
 }
