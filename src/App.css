@@ -1,4 +1,4 @@
-.video {
+/* .video {
   display: block;
 }
 
@@ -7,8 +7,30 @@
   display: flex;
   align-items: center;
   border: 1px solid black;
-}
+} */
 
 .canvas {
   width: 100%;
+}
+#dropDiv {
+  position: absolute;
+  top: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  /* width: 400px;
+  height: 300px; */
+  /* border: 1px solid black; */
+}
+.kanvaContainer {
+  /* border: 1px solid yellow; */
+  /* width: 400px; */
+  position: absolute;
+  top: 8px;
+}
+.video {
+  width: 100%;
+  height: 100vh;
 }

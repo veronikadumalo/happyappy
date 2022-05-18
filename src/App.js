@@ -1,7 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { createRef, useCallback, useEffect, useRef, useState } from 'react';
 import { Helmet } from 'react-helmet';
+import { Image as KonvaImage, Layer, Stage } from 'react-konva';
+import useImage from 'use-image';
 import './App.css';
 import { useWindowSize } from './hooks/useWindowSize';
+import { IndividualSticker } from './IndividualSticker';
+import { stickersData } from './stickers.data.js';
 
 function App() {
   const videoRef = useRef(null);
@@ -12,25 +16,16 @@ function App() {
   const chunksRef = useRef([]);
   const canvasContainerRef = useRef(null);
   const [isFrontCamera, setIsFrontCamera] = useState(true);
-  const [isVideoRecording, setIsVideoRecording] = useState(null);
   const [xPosition, setXPosition] = useState();
   const [yPosition, setYPosition] = useState();
-  const [isRenderClicked, setIsRenderClicked] = useState(false);
   const [cameraResolution, setCameraResolution] = useState({
     width: null,
     height: null,
   });
-  const [cameraDimensions, setCameraDimensions] = useState({
+  const [canvasDimensions, setCanvasDimensions] = useState({
     width: null,
     height: null,
   });
-  const { width, height } = useWindowSize();
-
-  useEffect(() => {
-    if (!width) return;
-    const height = width * (16 / 9);
-    setCameraDimensions({ width, height });
-  }, [width]);
 
   if (navigator.mediaDevices === undefined) {
     navigator.mediaDevices = {};
@@ -57,15 +52,57 @@ function App() {
   //   .query({ name: 'camera' })
   //   .then((res) => console.log(res));
 
+  const [background] = useImage('example-image.jpg');
+  const [images, setImages] = useState([]);
+  console.log(images);
+
+  const addStickerToPanel = ({ src, width, x, y }) => {
+    setImages((currentImages) => [
+      ...currentImages,
+      {
+        width,
+        x,
+        y,
+        src,
+        resetButtonRef: createRef(),
+      },
+    ]);
+  };
+
+  const resetAllButtons = useCallback(() => {
+    images.forEach((image) => {
+      if (image.resetButtonRef.current) {
+        image.resetButtonRef.current();
+      }
+    });
+  }, [images]);
+
+  const handleCanvasClick = useCallback(
+    (event) => {
+      if (event.target.attrs.id === 'backgroundImage') {
+        resetAllButtons();
+      }
+    },
+    [resetAllButtons]
+  );
+
   async function getMedia(constraints) {
     let stream = null;
 
     try {
       stream = await navigator.mediaDevices.getUserMedia(constraints);
+      const { clientWidth, clientHeight, videoWidth, videoHeight } =
+        videoRef.current;
+
       setCameraResolution({
-        width: videoRef.current.videoWidth,
-        height: videoRef.current.videoHeight,
+        width: videoWidth,
+        height: videoHeight,
       });
+      setCanvasDimensions({
+        width: clientWidth,
+        height: clientHeight,
+      });
+
       audioRef.current = stream.getAudioTracks()[0];
       if ('srcObject' in videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -140,15 +177,21 @@ function App() {
       video,
       0,
       0,
-      cameraDimensions.width,
-      cameraDimensions.height
+      canvasDimensions.width,
+      canvasDimensions.height
     );
     requestAnimationFrame(() => renderVideoOnCanvas(video));
   };
 
-  const renderImageOnCanvas = (image) => {
-    ctxRef.current.drawImage(image, xPosition - 15, yPosition - 25, 30, 50);
-    requestAnimationFrame(() => renderImageOnCanvas(image));
+  const renderImageOnCanvas = (image, i) => {
+    ctxRef.current.drawImage(
+      image,
+      images[i].x,
+      images[i].y,
+      images[i].width,
+      150
+    );
+    requestAnimationFrame(() => renderImageOnCanvas(image, i));
   };
 
   function allowDrop(ev) {
@@ -181,12 +224,14 @@ function App() {
     const videoDuration = videoRef.current.duration * 1000;
     audioRef.current.currentTime = 0;
     videoRef.current.currentTime = 0;
-    setIsRenderClicked(true);
-    const image = new Image();
-    image.src = 'sticker-1.png';
-    image.onload = function () {
-      renderImageOnCanvas(image);
-    };
+
+    images.forEach((image, i) => {
+      const canvasImage = new Image();
+      canvasImage.src = image.src;
+      canvasImage.onload = function () {
+        renderImageOnCanvas(canvasImage, i);
+      };
+    });
 
     const chunks = [];
     const stream = canvasRef.current.captureStream(30);
@@ -226,20 +271,10 @@ function App() {
           content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'
         />
       </Helmet>
-      <video
-        className='video'
-        ref={videoRef}
-        autoPlay
-        playsInline
-        width={width}
-        height={height}></video>
+      <video className='video' ref={videoRef} autoPlay playsInline></video>
       <div
         ref={canvasContainerRef}
         id='dropDiv'
-        style={{
-          width: cameraDimensions.width,
-          height: cameraDimensions.height,
-        }}
         onDrop={(e) => drop(e)}
         onDragOver={(e) => allowDrop(e)}>
         <canvas
@@ -258,17 +293,57 @@ function App() {
         Stop recording
       </button>
       <button onClick={render}>Render</button>
-      <br></br>
       <div>
-        <img
-          src='sticker-1.png'
-          width='30px'
-          height='50px'
-          alt=''
-          id='drag1'
-          draggable='true'
-          onDragStart={(e) => drag(e)}
-        />
+        <div className='kanvaContainer'>
+          <Stage
+            width={canvasDimensions.width}
+            height={canvasDimensions.height}
+            onClick={handleCanvasClick}
+            onTap={handleCanvasClick}>
+            <Layer>
+              <KonvaImage
+                image={''}
+                height={canvasDimensions.height}
+                width={canvasDimensions.width}
+                id='backgroundImage'
+              />
+              {images.map((image, i) => {
+                return (
+                  <IndividualSticker
+                    onDelete={() => {
+                      const newImages = [...images];
+                      newImages.splice(i, 1);
+                      setImages(newImages);
+                    }}
+                    onDragEnd={(event) => {
+                      image.x = event.target.x();
+                      image.y = event.target.y();
+                    }}
+                    key={i}
+                    image={image}
+                  />
+                );
+              })}
+            </Layer>
+          </Stage>
+        </div>
+        <h4 className='heading'>Click/Tap to add sticker to photo!</h4>
+        {stickersData.map((sticker) => {
+          return (
+            <button
+              className='button'
+              onMouseDown={() => {
+                addStickerToPanel({
+                  src: sticker.url,
+                  width: sticker.width,
+                  x: 100,
+                  y: 100,
+                });
+              }}>
+              <img alt={sticker.alt} src={sticker.url} width={sticker.width} />
+            </button>
+          );
+        })}
       </div>
     </div>
   );
