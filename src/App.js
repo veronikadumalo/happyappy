@@ -1,5 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, createRef, useCallback } from "react";
 import "./App.css";
+import { Image as KonvaImage, Layer, Stage } from "react-konva";
+import { stickersData } from "./stickers.data.js";
+import { IndividualSticker } from "./IndividualSticker";
+import useImage from "use-image";
 
 function App() {
   const videoRef = useRef(null);
@@ -16,6 +20,40 @@ function App() {
   const WIDTH = 400;
   const HEIGHT = 300;
   const [isRenderClicked, setIsRenderClicked] = useState(false);
+
+  const [background] = useImage("example-image.jpg");
+  const [images, setImages] = useState([]);
+  console.log(images);
+
+  const addStickerToPanel = ({ src, width, x, y }) => {
+    setImages((currentImages) => [
+      ...currentImages,
+      {
+        width,
+        x,
+        y,
+        src,
+        resetButtonRef: createRef(),
+      },
+    ]);
+  };
+
+  const resetAllButtons = useCallback(() => {
+    images.forEach((image) => {
+      if (image.resetButtonRef.current) {
+        image.resetButtonRef.current();
+      }
+    });
+  }, [images]);
+
+  const handleCanvasClick = useCallback(
+    (event) => {
+      if (event.target.attrs.id === "backgroundImage") {
+        resetAllButtons();
+      }
+    },
+    [resetAllButtons]
+  );
 
   async function getMedia(constraints) {
     let stream = null;
@@ -78,9 +116,15 @@ function App() {
     requestAnimationFrame(() => renderVideoOnCanvas(video));
   };
 
-  const renderImageOnCanvas = (image) => {
-    ctxRef.current.drawImage(image, xPosition - 15, yPosition - 25, 30, 50);
-    requestAnimationFrame(() => renderImageOnCanvas(image));
+  const renderImageOnCanvas = (image, i) => {
+    ctxRef.current.drawImage(
+      image,
+      images[i].x,
+      images[i].y,
+      images[i].width,
+      150
+    );
+    requestAnimationFrame(() => renderImageOnCanvas(image, i));
   };
 
   function allowDrop(ev) {
@@ -114,11 +158,13 @@ function App() {
     audioRef.current.currentTime = 0;
     videoRef.current.currentTime = 0;
     setIsRenderClicked(true);
-    const image = new Image();
-    image.src = "sticker-1.png";
-    image.onload = function () {
-      renderImageOnCanvas(image);
-    };
+    images.map((image, i) => {
+      const canvasImage = new Image();
+      canvasImage.src = image.src;
+      canvasImage.onload = function () {
+        renderImageOnCanvas(canvasImage, i);
+      };
+    });
 
     const chunks = [];
     const stream = canvasRef.current.captureStream(30);
@@ -152,7 +198,7 @@ function App() {
 
   return (
     <div className="App">
-      <video ref={videoRef}></video>
+      <video ref={videoRef} className="video"></video>
 
       <div
         ref={canvasContainerRef}
@@ -176,7 +222,7 @@ function App() {
         Stop recording
       </button>
       <button onClick={render}>Render</button>
-      <div>test</div>
+      {/* <div>test</div>
       <br></br>
       <div>
         <img
@@ -188,6 +234,60 @@ function App() {
           draggable="true"
           onDragStart={(e) => drag(e)}
         />
+      </div> */}
+      <div>
+        <div className="kanvaContainer">
+          <Stage
+            width={WIDTH}
+            height={HEIGHT}
+            onClick={handleCanvasClick}
+            onTap={handleCanvasClick}
+          >
+            <Layer>
+              <KonvaImage
+                image={""}
+                height={HEIGHT}
+                width={WIDTH}
+                id="backgroundImage"
+              />
+              {images.map((image, i) => {
+                return (
+                  <IndividualSticker
+                    onDelete={() => {
+                      const newImages = [...images];
+                      newImages.splice(i, 1);
+                      setImages(newImages);
+                    }}
+                    onDragEnd={(event) => {
+                      image.x = event.target.x();
+                      image.y = event.target.y();
+                    }}
+                    key={i}
+                    image={image}
+                  />
+                );
+              })}
+            </Layer>
+          </Stage>
+        </div>
+        <h4 className="heading">Click/Tap to add sticker to photo!</h4>
+        {stickersData.map((sticker) => {
+          return (
+            <button
+              className="button"
+              onMouseDown={() => {
+                addStickerToPanel({
+                  src: sticker.url,
+                  width: sticker.width,
+                  x: 100,
+                  y: 100,
+                });
+              }}
+            >
+              <img alt={sticker.alt} src={sticker.url} width={sticker.width} />
+            </button>
+          );
+        })}
       </div>
     </div>
   );
