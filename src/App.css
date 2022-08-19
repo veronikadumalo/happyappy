@@ -24,6 +24,12 @@
   height: 300px; */
   /* border: 1px solid black; */
 }
+#dropDiv canvas {
+  -webkit-transform: scaleX(-1);
+  -moz-transform: scaleX(-1);
+  -o-transform: scaleX(-1);
+  transform: scaleX(-1);
+}
 .kanvaContainer {
   /* border: 1px solid yellow; */
   /* width: 400px; */
@@ -33,4 +39,16 @@
 .video {
   width: 100%;
   height: 100vh;
+  -webkit-transform: scaleX(-1);
+  -moz-transform: scaleX(-1);
+  -o-transform: scaleX(-1);
+  transform: scaleX(-1);
+}
+
+.buttons {
+  padding-top: 150px;
+}
+
+.App {
+  /* min-height: 2000px; */
 }
